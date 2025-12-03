@@ -1,7 +1,10 @@
 /**
- * app.js
+ * Title: Vehicle Validate Application
+ * Created By: Kory Goossens, Ahmed Said, Chase Petrowksy
+ * Course: [Course Name/Number]
+ * Date: December 5, 2025
+ * 
  * Main Express server for Vehicle Validate
- *
  * - Serves static frontend from /public
  * - Connects to MongoDB Atlas using mongoose
  * - Accepts CRUD for forms and submissions
