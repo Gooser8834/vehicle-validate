@@ -18,6 +18,9 @@ const mongoose = require('mongoose');
 const multer = require('multer');
 const cors = require('cors');
 
+// Controllers
+const formController = require('./controllers/formController');
+
 // Models
 const Form = require('./models/Form');
 const Submission = require('./models/Submission');
@@ -70,100 +73,34 @@ mongoose
 
 /**
  * GET /api/forms
- * Return all forms (lightweight)
+ * Return all forms
  */
-app.get('/api/forms', async (req, res) => {
-  try {
-    const forms = await Form.find({}, 'name'); // return name and _id
-    res.json(forms);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server error fetching forms' });
-  }
-});
+app.get('/api/forms', formController.getAllForms);
 
 /**
  * GET /api/forms/:id
  * Return a single form with its fields
  */
-app.get('/api/forms/:id', async (req, res) => {
-  try {
-    const form = await Form.findById(req.params.id);
-    if (!form) return res.status(404).json({ error: 'Form not found' });
-    res.json(form);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server error fetching form' });
-  }
-});
+app.get('/api/forms/:id', formController.getFormById);
 
 /**
  * POST /api/forms
  * Create a new form
  * Body: { name: string, fields: [ { label, type, required } ] }
  */
-app.post('/api/forms', async (req, res) => {
-  try {
-    const { name, fields } = req.body;
-    const form = new Form({ name, fields });
-    await form.save();
-    res.status(201).json(form);
-  } catch (err) {
-    console.error(err);
-    res.status(400).json({ error: 'Invalid form data' });
-  }
-});
+app.post('/api/forms', formController.createForm);
 
 /**
  * PUT /api/forms/:id
  * Update a form (name and fields)
  */
-app.put('/api/forms/:id', async (req, res) => {
-  try {
-    const { name, fields } = req.body;
-    const form = await Form.findByIdAndUpdate(
-      req.params.id,
-      { name, fields },
-      { new: true }
-    );
-    if (!form) return res.status(404).json({ error: 'Form not found' });
-    res.json(form);
-  } catch (err) {
-    console.error(err);
-    res.status(400).json({ error: 'Invalid data' });
-  }
-});
+app.put('/api/forms/:id', formController.updateForm);
 
 /**
  * DELETE /api/forms/:id
  * Delete form and its submissions
  */
-app.delete('/api/forms/:id', async (req, res) => {
-  try {
-    const formId = req.params.id;
-    await Form.findByIdAndDelete(formId);
-
-    // remove any submissions referencing this form and, optionally, their uploaded files
-    const subs = await Submission.find({ form: formId });
-
-    // delete uploaded files for those submissions
-    for (const s of subs) {
-      if (Array.isArray(s.photos)) {
-        for (const p of s.photos) {
-          try {
-            fs.unlinkSync(path.join(__dirname, p));
-          } catch (e) {}
-        }
-      }
-    }
-
-    await Submission.deleteMany({ form: formId });
-    res.json({ message: 'Form and related submissions deleted' });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server error deleting form' });
-  }
-});
+app.delete('/api/forms/:id', formController.deleteForm);
 
 // ---------------------- API: Submissions --------------------------------
 
@@ -254,7 +191,7 @@ app.delete('/api/submissions/:id', async (req, res) => {
       for (const p of sub.photos) {
         try {
           fs.unlinkSync(path.join(__dirname, p));
-        } catch (e) {}
+        } catch (e) { }
       }
     }
 
