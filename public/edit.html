@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -56,7 +57,7 @@
             opacity: 0.5;
             background: #edf2f7;
             transform: rotate(3deg);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.18);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.18);
             z-index: 1000;
         }
 
@@ -123,6 +124,7 @@
         }
     </style>
 </head>
+
 <body>
     <nav>
         <a href="index.html">Manage Forms</a>
@@ -149,7 +151,7 @@
             <label for="requiredInput" style="margin:0; cursor:pointer;">Required</label>
         </div>
 
-        <button class="btn btn-primary" onclick="addField()">Add Field</button>
+        <button class="btn btn-primary" onclick="editPageModule.addField()">Add Field</button>
     </div>
 
     <h2>Form Preview</h2>
@@ -159,11 +161,13 @@
     <div id="preview" class="preview-container"></div>
 
     <div style="margin-top:30px;">
-        <button class="btn btn-primary" style="font-size:18px; padding:14px 28px;" onclick="saveFormAndReturn()">
+        <button class="btn btn-primary" style="font-size:18px; padding:14px 28px;"
+            onclick="editPageModule.saveFormAndReturn()">
             Save Form & Return
         </button>
     </div>
 
     <script src="script.js"></script>
 </body>
+
 </html>
