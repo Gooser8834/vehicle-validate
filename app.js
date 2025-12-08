@@ -18,9 +18,9 @@ const mongoose = require('mongoose');
 const multer = require('multer');
 const cors = require('cors');
 
-// Models
-const Form = require('./models/Form');
-const Submission = require('./models/Submission');
+// Controllers
+const formController = require('./controllers/formController');
+const submissionController = require('./controllers/submissionController');
 
 const app = express();
 
@@ -70,201 +70,60 @@ mongoose
 
 /**
  * GET /api/forms
- * Return all forms (lightweight)
+ * Return all forms
  */
-app.get('/api/forms', async (req, res) => {
-  try {
-    const forms = await Form.find({}, 'name'); // return name and _id
-    res.json(forms);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server error fetching forms' });
-  }
-});
+app.get('/api/forms', formController.getAllForms);
 
 /**
  * GET /api/forms/:id
  * Return a single form with its fields
  */
-app.get('/api/forms/:id', async (req, res) => {
-  try {
-    const form = await Form.findById(req.params.id);
-    if (!form) return res.status(404).json({ error: 'Form not found' });
-    res.json(form);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server error fetching form' });
-  }
-});
+app.get('/api/forms/:id', formController.getFormById);
 
 /**
  * POST /api/forms
  * Create a new form
  * Body: { name: string, fields: [ { label, type, required } ] }
  */
-app.post('/api/forms', async (req, res) => {
-  try {
-    const { name, fields } = req.body;
-    const form = new Form({ name, fields });
-    await form.save();
-    res.status(201).json(form);
-  } catch (err) {
-    console.error(err);
-    res.status(400).json({ error: 'Invalid form data' });
-  }
-});
+app.post('/api/forms', formController.createForm);
 
 /**
  * PUT /api/forms/:id
  * Update a form (name and fields)
  */
-app.put('/api/forms/:id', async (req, res) => {
-  try {
-    const { name, fields } = req.body;
-    const form = await Form.findByIdAndUpdate(
-      req.params.id,
-      { name, fields },
-      { new: true }
-    );
-    if (!form) return res.status(404).json({ error: 'Form not found' });
-    res.json(form);
-  } catch (err) {
-    console.error(err);
-    res.status(400).json({ error: 'Invalid data' });
-  }
-});
+app.put('/api/forms/:id', formController.updateForm);
 
 /**
  * DELETE /api/forms/:id
  * Delete form and its submissions
  */
-app.delete('/api/forms/:id', async (req, res) => {
-  try {
-    const formId = req.params.id;
-    await Form.findByIdAndDelete(formId);
-
-    // remove any submissions referencing this form and, optionally, their uploaded files
-    const subs = await Submission.find({ form: formId });
-
-    // delete uploaded files for those submissions
-    for (const s of subs) {
-      if (Array.isArray(s.photos)) {
-        for (const p of s.photos) {
-          try {
-            fs.unlinkSync(path.join(__dirname, p));
-          } catch (e) {}
-        }
-      }
-    }
-
-    await Submission.deleteMany({ form: formId });
-    res.json({ message: 'Form and related submissions deleted' });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server error deleting form' });
-  }
-});
+app.delete('/api/forms/:id', formController.deleteForm);
 
 // ---------------------- API: Submissions --------------------------------
 
 /**
  * POST /api/forms/:id/submissions
+ * Create a new submission
  */
-app.post('/api/forms/:id/submissions', upload.array('photos'), async (req, res) => {
-  try {
-    const formId = req.params.id;
-    const dataRaw = req.body.data;
-    let parsed = {};
-
-    if (dataRaw) {
-      parsed = JSON.parse(dataRaw);
-    }
-
-    const form = await Form.findById(formId);
-    if (!form) return res.status(404).json({ error: 'Form not found' });
-
-    const photos = (req.files || []).map(f =>
-      path.join('uploads', f.filename)
-    );
-
-    const submission = new Submission({
-      form: formId,
-      answers: parsed.answers || {},
-      photos,
-      submittedAt: new Date(),
-      notes: parsed._notes || ''
-    });
-
-    await submission.save();
-    res.status(201).json(submission);
-  } catch (err) {
-    console.error('Error saving submission:', err);
-    res.status(400).json({ error: 'Invalid submission data' });
-  }
-});
+app.post('/api/forms/:id/submissions', upload.array('photos'), submissionController.createSubmission);
 
 /**
  * GET /api/submissions
+ * Get all submissions, optionally filtered by form ID
  */
-app.get('/api/submissions', async (req, res) => {
-  try {
-    const query = {};
-    if (req.query.form) query.form = req.query.form;
-
-    const subs = await Submission.find(query)
-      .sort({ submittedAt: -1 })
-      .lean();
-
-    res.json(subs);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to fetch submissions' });
-  }
-});
+app.get('/api/submissions', submissionController.getAllSubmissions);
 
 /**
  * PUT /api/submissions/:id/notes
+ * Update notes for a submission
  */
-app.put('/api/submissions/:id/notes', async (req, res) => {
-  try {
-    const update = await Submission.findByIdAndUpdate(
-      req.params.id,
-      { notes: req.body.notes || '' },
-      { new: true }
-    );
-
-    if (!update) return res.status(404).json({ error: 'Submission not found' });
-
-    res.json(update);
-  } catch (err) {
-    console.error(err);
-    res.status(400).json({ error: 'Failed to update notes' });
-  }
-});
+app.put('/api/submissions/:id/notes', submissionController.updateSubmissionNotes);
 
 /**
  * DELETE /api/submissions/:id
+ * Delete a submission and its uploaded files
  */
-app.delete('/api/submissions/:id', async (req, res) => {
-  try {
-    const sub = await Submission.findById(req.params.id);
-    if (!sub) return res.status(404).json({ error: 'Submission not found' });
-
-    if (Array.isArray(sub.photos)) {
-      for (const p of sub.photos) {
-        try {
-          fs.unlinkSync(path.join(__dirname, p));
-        } catch (e) {}
-      }
-    }
-
-    await sub.remove();
-    res.json({ message: 'Submission deleted' });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to delete submission' });
-  }
-});
+app.delete('/api/submissions/:id', submissionController.deleteSubmission);
 
 // ---------------------------------------------------------------------
 // FIXED CATCH-ALL ROUTE (NO MORE path-to-regexp ERRORS)
