@@ -4,7 +4,7 @@
  * Course: [Course Name/Number]
  * Date: December 5, 2025
  * 
- * Main Express server for Vehicle Validate
+ * Main Express server for Vehicle Validaten
  * - Serves static frontend from /public
  * - Connects to MongoDB Atlas using mongoose
  * - Accepts CRUD for forms and submissions

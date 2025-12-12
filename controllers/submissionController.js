@@ -101,7 +101,7 @@ async function deleteSubmission(req, res) {
             }
         }
 
-        await sub.remove();
+        await sub.deleteOne(); // ✅ correct for Mongoose 7+
         res.json({ message: 'Submission deleted' });
     } catch (err) {
         console.error(err);
